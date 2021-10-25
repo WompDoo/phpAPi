@@ -4,10 +4,10 @@
  */
 class db {
   
-  private $dbhost = 'localhost';
-  private $dbuser = 'root';
-  private $dbpass = '';
-  private $dbname = 'api_db';
+  private $dbhost = 'exampleapp-db';
+  private $dbuser = 'exampleapp-db';
+  private $dbpass = 'exampleapp-pw';
+  private $dbname = 'exampleapp-db';
 
   public function connect() {
 

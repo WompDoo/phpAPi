@@ -1,0 +1,86 @@
+version: "3.3"
+services:
+  app:
+    container_name: exampleapp-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "8000:8000"
+    working_dir: /var/www/html
+    networks:
+      - app-network
+    depends_on:
+      - db
+    volumes:
+      - ./:/var/www/html
+      - ./none-tmp:/var/www/html/backups
+      - ./php/live.ini:/usr/local/etc/php/conf.d/live.ini
+    environment:
+      - PHP_IDE_CONFIG=serverName=exampleapp
+    env_file:
+      - .env
+
+  webserver:
+    image: nginx:alpine
+    container_name: webserver
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ./:/var/www/html
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - app-network
+    environment:
+      - PHP_IDE_CONFIG=${PHP_IDE_CONFIG}
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  db:
+    image: mysql:8.0.24
+    container_name: exampleapp-db
+    restart: unless-stopped
+    tty: true
+    env_file:
+      - .env
+    command: mysqld --default-authentication-plugin=mysql_native_password --skip-mysqlx
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - exampleapp-dbdata:/var/lib/mysql-files
+      - ./mysql/my.cnf:/etc/mysql/my.cnf
+    networks:
+      - app-network
+
+  phpmyadmin:
+    depends_on:
+      - db
+    image: phpmyadmin:5.1.0
+    restart: unless-stopped
+    ports:
+      - '8081:80'
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    networks:
+      - app-network
+
+volumes:
+  exampleapp-dbdata:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
+
